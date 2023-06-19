@@ -1,0 +1,109 @@
+---
+title: "Reprting Tools Challenge"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+# Shiny
+library(flexdashboard)
+library(shiny)
+library(DT)
+
+# Core
+library(tidyverse)
+library(lubridate)
+
+# Interactive Visualizations
+library(plotly)
+
+# Spatial Data
+library(raster) #Outdatted library
+library(Rcpp)
+library(sf)
+
+# Currency formatting
+#source("00_scripts/plot_sales.R")
+source("plot_sales.R")
+
+```
+
+```{r}
+# Make data
+bikes_tbl      <- readRDS("bikes_tbl.rds")
+bikeshops_tbl  <- readRDS("bikeshops_tbl.rds")
+orderlines_tbl <- readRDS("orderlines_tbl.rds")
+
+bike_orderlines_tbl <- orderlines_tbl %>%
+    left_join(bikes_tbl,     by = c("product_id" = "bike_id")) %>%
+    left_join(bikeshops_tbl, by = c("customer_id" = "bikeshop_id")) %>%
+    
+    # Add the total price
+    mutate(total_price = price_euro * quantity)
+
+# German spatial data
+germany_sp <- getData('GADM', country='DE', level=1) 
+# Convert SpatialPolygonsDataFrame to an sf dataframe
+germany_sf <- st_as_sf(germany_sp) %>% 
+                  # Add english names
+                  mutate(VARNAME_1 = ifelse(is.na(VARNAME_1), NAME_1, VARNAME_1)) 
+
+#bike_orderlines_tbl
+```
+
+Sidebar {.sidebar}
+------------------------
+
+```{r}
+#Inputs
+checkboxGroupInput(inputId = "checkbox_group", 
+                   label   = h4("Checkbox Group"), 
+                   choices = c("Bike Type" = "category_1",
+                               "Bike Family"       = "category_2"), 
+                   selected = c("category_1", "category_2"))
+
+dateRangeInput(inputId = "date_range", 
+               label   = h4("Date Range"), 
+               start   = "2018-01-01", 
+               #end     = today(),
+               end     = max(bike_orderlines_tbl$order_date),  
+               min     = min(bike_orderlines_tbl$order_date), 
+               max     = max(bike_orderlines_tbl$order_date), 
+               startview = "year")
+```
+
+
+Column {data-width=750}
+-----------------------
+
+```{r}
+# Reactive Filter
+sales_data_filtered <- reactive({
+  
+  bike_orderlines_tbl %>%
+    filter(category_1 %in% input$checkbox_group) %>%
+    filter(order_date %>% between(left  = ymd(input$date_range[1]), 
+                            right = ymd(input$date_range[2]))) %>%
+    filter(total_price %>% between(left  = input$slider_input[1],
+                             right = input$slider_input[2]))
+})
+```
+
+### Section - Reactive Output
+
+```{r}
+#  renderPrint( sales_data_filtered() )
+
+output$dt_output_1 <- DT::renderDataTable(expr = {
+  
+  sales_data_filtered() %>%
+    mutate(total_price = scales::dollar(total_price))
+  
+}, options = list(scrollY = "250px"))
+
+DTOutput(outputId = "dt_output_1")
+
+```
