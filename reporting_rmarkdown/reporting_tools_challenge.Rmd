@@ -8,6 +8,8 @@ runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
+#library(rsconnect)
+
 # Shiny
 library(flexdashboard)
 library(shiny)
@@ -22,7 +24,7 @@ library(plotly)
 
 # Spatial Data
 library(raster) #Outdatted library
-library(Rcpp)
+#library(Rcpp)
 library(sf)
 
 # Currency formatting
@@ -51,7 +53,16 @@ germany_sf <- st_as_sf(germany_sp) %>%
                   # Add english names
                   mutate(VARNAME_1 = ifelse(is.na(VARNAME_1), NAME_1, VARNAME_1)) 
 
-#bike_orderlines_tbl
+
+
+```
+
+```{r}
+#unique(bike_orderlines_tbl$category_1)
+#unique(bike_orderlines_tbl$category_2)
+
+bike_orderlines_tbl_filtered <- bike_orderlines_tbl %>%
+    dplyr::select(-frame_material, -weight, -gender, -description, -url, -name, -lat, -lng, -category_3, -price_euro, -order_id, -order_line, -customer_id, -product_id, -quantity, -model, -year, -city) 
 ```
 
 Sidebar {.sidebar}
@@ -59,11 +70,21 @@ Sidebar {.sidebar}
 
 ```{r}
 #Inputs
-checkboxGroupInput(inputId = "checkbox_group", 
-                   label   = h4("Checkbox Group"), 
-                   choices = c("Bike Type" = "category_1",
-                               "Bike Family"       = "category_2"), 
-                   selected = c("category_1", "category_2"))
+checkboxGroupInput(inputId = "checkbox_group_1", 
+                   label   = h4("Checkbox Group Bike Type"),
+                   choices = setNames(unique(bike_orderlines_tbl$category_1),unique(bike_orderlines_tbl$category_1)),
+                   #choices = c("Bike Type" = unique(bike_orderlines_tbl$category_1)), 
+                   #selected = c("category_1", "category_2"))
+                   #selected = unique(bike_orderlines_tbl$category_1))
+                   selected = character(0))
+
+checkboxGroupInput(inputId = "checkbox_group_2", 
+                   label   = h4("Checkbox Group Bike Type"), 
+                   choices = setNames(unique(bike_orderlines_tbl$category_2),unique(bike_orderlines_tbl$category_2)),
+                   #choices = c("Bike Family" = unique(bike_orderlines_tbl$category_2)), 
+                   #selected = c("category_1", "category_2"))
+                   #selected = unique(bike_orderlines_tbl$category_2))
+                   selected = character(0))
 
 dateRangeInput(inputId = "date_range", 
                label   = h4("Date Range"), 
@@ -73,6 +94,17 @@ dateRangeInput(inputId = "date_range",
                min     = min(bike_orderlines_tbl$order_date), 
                max     = max(bike_orderlines_tbl$order_date), 
                startview = "year")
+
+sliderInput(inputId = "slider_input", 
+            label   = h4("Slider Range"), 
+            #min     = 1,
+            #max     = 100, 
+            min = min(bike_orderlines_tbl$total_price),
+            max = max(bike_orderlines_tbl$total_price),
+            value   = c(min(bike_orderlines_tbl$total_price), max(bike_orderlines_tbl$total_price)), # Initial values of the slider
+            step    = 1, # Interval between each selectable value
+            round   = TRUE, # Round to the nearest integer
+            pre     = "$")
 ```
 
 
@@ -83,13 +115,52 @@ Column {data-width=750}
 # Reactive Filter
 sales_data_filtered <- reactive({
   
-  bike_orderlines_tbl %>%
-    filter(category_1 %in% input$checkbox_group) %>%
+  #bike_orderlines_tbl %>%
+  bike_orderlines_tbl_filtered %>%
+    #filter(category_1 %in% input$checkbox_group_1 | category_2 %in% input$checkbox_group_2) %>%
+    filter(category_1 %in% input$checkbox_group_1 & category_2 %in% input$checkbox_group_2) %>%
     filter(order_date %>% between(left  = ymd(input$date_range[1]), 
                             right = ymd(input$date_range[2]))) %>%
     filter(total_price %>% between(left  = input$slider_input[1],
                              right = input$slider_input[2]))
 })
+
+#sales_data_filtered <- reactive({
+  
+  #bike_orderlines_tbl %>%
+#  bike_orderlines_tbl_filtered %>%
+#    filter(category_2 %in% input$checkbox_group_2) %>%
+#    filter(order_date %>% between(left  = ymd(input$date_range[1]), right = ymd(input$date_range[2]))) %>%
+#    filter(total_price %>% between(left  = input$slider_input[1], right = input$slider_input[2])) })
+
+
+
+```
+
+### By State
+
+```{r}
+geo_plot_tbl <- bike_orderlines_tbl_filtered %>% 
+                  group_by(state) %>%
+                  summarise(total_revenue = sum(total_price)) %>%
+                  ungroup() %>%
+                  right_join(germany_sf, by = c("state" = "VARNAME_1")) %>% 
+                  mutate(total_revenue = ifelse(is.na(total_revenue), 0, total_revenue)) %>% 
+                  mutate(label_text = str_glue("State: {state}
+                                         Revenue: {format_to_euro(total_revenue)}")) %>% 
+                  st_as_sf()
+```
+
+```{r}
+plot_ly(geo_plot_tbl, 
+        split      = ~NAME_1, 
+        color      = ~total_revenue,
+        colors     = "Blues",
+        stroke     = I("black"),
+        hoverinfo  = 'text', 
+        text       = ~label_text, 
+        hoveron    = "fills", 
+        showlegend = FALSE) 
 ```
 
 ### Section - Reactive Output
@@ -106,4 +177,29 @@ output$dt_output_1 <- DT::renderDataTable(expr = {
 
 DTOutput(outputId = "dt_output_1")
 
+```
+
+
+
+Column {data-width=200}
+-----------------------
+
+### Section - Checkbox Output
+
+```{r}
+#renderPrint(input$checkbox_group_1)
+#renderPrint(input$checkbox_group_2)
+
+output$checkbox_values <- renderPrint({
+  selected_boxes_1 <- input$checkbox_group_1
+  selected_boxes_2 <- input$checkbox_group_2
+  
+  selected_values <- c(selected_boxes_1, selected_boxes_2)
+
+  selected_values <- selected_values[selected_values != ""]
+  
+  paste("Selected Boxes:", paste(selected_values, collapse = ", "))
+})
+
+textOutput(outputId = "checkbox_values")
 ```

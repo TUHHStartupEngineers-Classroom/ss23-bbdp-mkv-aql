@@ -28,7 +28,7 @@ sales_data_tbl <- tibble(
   
 )
 
-#sales_data_tbl
+sales_data_tbl
 ```
 
 
