@@ -41,28 +41,18 @@ ui <- fluidPage(
     #First column
     column(width = 4, "Selection",
            wellPanel(
-             #pickerInput(inputId = "index_selection",
-                         #choices = 1:10)
-                         #label = "Select Index",
-                         #choices = c("DAX", "SP500", "DOW", "NASDAQ"), "INDEX",
-                        
-                         
-                         #uiOutput("indices")
-               
+
              pickerInput(
                inputId = "index_picker",
                label = "Select an index:",
                choices = c("SP500", "DOW", "NASDAQ", "DAX"),
                selected = NULL,
-             #),
-             
-             
-           ),
-           # Second pickerInput (dynamic)
-           uiOutput("stock_picker"),
-             
-             
-             #uiOutput("indices"),
+               
+               
+             ),
+             # Second pickerInput (dynamic)
+             uiOutput("stock_picker"),
+
              
              
              
@@ -71,12 +61,17 @@ ui <- fluidPage(
              actionButton(inputId = "analyze", label = "Analyze", icon = icon("download")),
              
              # For Testing observeEvent()
-             verbatimTextOutput("eventOutput")
+             verbatimTextOutput("eventOutput"),
+             
+             
+             #Moving average sliders
+             hr()
+             
            )
            
            
     ),
-
+    
     
     #2nd column
     column(width = 8, "Plot",
@@ -131,7 +126,6 @@ server <- function(input, output, session) {
   # Store the stock data
   stock_data <- reactive({
     stock_symbol <- selected_symbol()
-    #get_stock_data(stock_symbol)
     stock_symbol() %>% get_symbol_from_user_input() %>% get_stock_data()
   })
   
@@ -164,7 +158,7 @@ server <- function(input, output, session) {
   
   output$selected_symbol_output <- renderText({stock_symbol()
   })
-
+  
   
   # extract / get stock data ------------------------------------
   output$tableOutput <- renderPrint({
@@ -190,46 +184,16 @@ server <- function(input, output, session) {
   
   
   # Create stock list ----------------------------------------------------
-  
-  #output$indices <- renderUI({
-    #stock_list_tbl <- input$index_selection 
-    #stock_list_tbl <- get_stock_list(input$index_selection)
-    #stock_list_tbl <- input$indices
-    #print(stock_list_tbl)
-    #selected_index <- input$index_selection
-    
-    #if (!is.null(selected_index)) {
-      #choices = stock_list_tbl() %>% purrr::pluck("label")
-      #stock_list_tbl = get_stock_list(selected_index)
-      #choices = stock_list_tbl %>% purrr::pluck("label")
-      
-      #pickerInput(inputId = "indices",
-                  #label = "Select a stock:",
-                  #choices = 1:10)
-                  #choices = stock_list_tbl$label,
-                  #choices = stock_list_tbl,
-                  #choices = choices,
-                  #choices = get_stock_list(selected_index)
-        
-      #)
-      
-    #}
-    
-    
-  #})
-  
   output$stock_picker <- renderUI({
     selected_index <- input$index_picker
     
     if (!is.null(selected_index)) {
-      # Filter the countries based on the selected continent
       
       
       # Create the second pickerInput
       pickerInput(
         inputId = "stock_selection",
         label = "Select a stock:",
-        #choices = c("DAX", "SP500", "DOW", "NASDAQ")
         choices = get_stock_list(selected_index)
       )
     }
