@@ -1,0 +1,13 @@
+name: reporting_tools_challenge
+title: reporting_tools_challenge
+username:
+account: mkv-aql
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 9337214
+bundleId: 7366519
+url: https://mkv-aql.shinyapps.io/reporting_tools_challenge/
+when: 1687265033.85792
+lastSyncTime: 1687265033.85793
+asMultiple: FALSE
+asStatic: FALSE
