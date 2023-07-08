@@ -16,6 +16,8 @@ library(tidyverse)
 library(rvest)
 library(glue)
 
+includeCSS("styles.css")
+
 #source(file = "00_scripts/stock_analysis_functions.R")
 source(file = "stock_analysis_functions.R")
 #stock_list_tbl <- get_stock_list("SP500")
@@ -65,7 +67,21 @@ ui <- fluidPage(
              
              
              #Moving average sliders
-             hr()
+             hr(),
+             
+             sliderInput(
+               inputId = "short_ma_slider",
+               label = "Short Moving Average",
+               min = 5, max = 40, value = 20
+             ),
+             sliderInput(
+               inputId = "long_ma_slider",
+               label = "Long Moving Average",
+               min = 50, max = 120, value = 50
+             ),
+             
+             dateRangeInput(inputId = "date_range", label = "Select Date Range:",
+                            start = today() - days(180), end = today())
              
            )
            
@@ -160,26 +176,43 @@ server <- function(input, output, session) {
   })
   
   
-  # extract / get stock data ------------------------------------
+  # extract / get stock data / Also slider input------------------------------------
   output$tableOutput <- renderPrint({
     if (input$analyze > 0) {
       stock_symbol() %>% get_symbol_from_user_input() %>%
-        get_stock_data(from = today() - days(180), 
-                       to   = today(),
-                       mavg_short = 20,
-                       mavg_long  = 50)
+        get_stock_data(#from = today() - days(180), 
+                       #to   = today(),
+                        from = input$date_range[1], 
+                        to   = input$date_range[2],
+                       #mavg_short = 20,
+                       #mavg_long  = 50)
+                       mavg_short = input$short_ma_slider,
+                       mavg_long  = input$long_ma_slider)
     }
   })
   
-  # Plotting number 2 ----------------------------------------------
+  # Plotting / Also slider input ----------------------------------------------
+  
+  
   output$plotly_plot <- renderPlotly({
+    #short_ma <- input$short_ma_slider
+    #long_ma <- input$long_ma_slider
     stock_data_tbl <- stock_symbol() %>% get_symbol_from_user_input() %>%
-      get_stock_data(from = today() - days(180), 
-                     to   = today(),
-                     mavg_short = 20,
-                     mavg_long  = 50)
+      get_stock_data(#from = today() - days(180), 
+                    #to   = today(),
+                    from = input$date_range[1], 
+                    to   = input$date_range[2],
+                     #mavg_short = 20,
+                     #mavg_long  = 50)
+                      mavg_short = input$short_ma_slider,
+                      mavg_long  = input$long_ma_slider)
     
-    plot_stock_data(stock_data_tbl)
+    print(input$short_ma_slider)
+    print(input$long_ma_slider)
+    print(input$date_range[1])
+    print(input$date_range[2])
+    
+    plot_stock_data(stock_data_tbl)#, input$short_ma_slider, input$long_ma_slider)
   })
   
   

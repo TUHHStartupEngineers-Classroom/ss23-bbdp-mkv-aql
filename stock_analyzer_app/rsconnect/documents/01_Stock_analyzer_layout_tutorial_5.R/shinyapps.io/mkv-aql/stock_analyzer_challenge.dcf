@@ -1,0 +1,13 @@
+name: stock_analyzer_challenge
+title: stock_analyzer_challenge
+username:
+account: mkv-aql
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 9337244
+bundleId: 7415531
+url: https://mkv-aql.shinyapps.io/stock_analyzer_challenge/
+when: 1688407446.82098
+lastSyncTime: 1688407446.82099
+asMultiple: FALSE
+asStatic: FALSE

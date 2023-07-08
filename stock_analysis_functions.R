@@ -94,7 +94,7 @@ function(stock_data) {
   g <- stock_data %>%
     
     # convert to long format
-    pivot_longer(cols    = c(mavg_short, mavg_long), 
+    tidyr::pivot_longer(cols    = c(mavg_short, mavg_long), 
                  names_to = "legend", 
                  values_to    = "value", 
                  names_ptypes = list(legend = factor())) %>% 
